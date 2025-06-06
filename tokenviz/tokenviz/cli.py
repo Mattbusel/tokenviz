@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+TokenViz: Visualize token usage in text prompts for OpenAI models.
+"""
+
 import click
 import tiktoken
 import sys
@@ -150,10 +155,4 @@ def main(text, file_path, model, top, threshold):
     # Summary stats
     if len(line_analysis) > 1:
         avg_tokens = sum(tokens for _, _, tokens in line_analysis) / len(line_analysis)
-        click.secho(f"\n📈 Stats:", fg="blue", bold=True)
-        click.secho(f"Average tokens per line: {avg_tokens:.1f}")
-        click.secho(f"Highest token line: {max_tokens} tokens")
-        click.secho(f"Lines over 50 tokens: {sum(1 for _, _, t in line_analysis if t > 50)}")
-
-if __name__ == "__main__":
-    main()
+        click.secho(f"\n📈 Stats:", fg="blue", bol
