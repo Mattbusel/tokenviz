@@ -2,7 +2,7 @@
 
 A fast, clean CLI tool to analyze token usage in text prompts for OpenAI models. Perfect for prompt engineering, staying under token limits, and optimizing your AI interactions.
 
-##  Quick Start
+## Quick Start
 
 ```bash
 # Install
@@ -53,19 +53,19 @@ Total tokens: 127
 Total lines analyzed: 8
 
 Line breakdown:
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-  3:  45 tokens | ████████████████████████████████████████████████ | You are an expert software engineer with deep knowledge of Python...
-  1:  28 tokens | ██████████████████████████████████                | Write a comprehensive guide for building REST APIs with FastAPI
-  5:  22 tokens | ████████████████████████████                      | Include examples of authentication and database integration
-  7:  18 tokens | ████████████████████████                          | Make sure to cover testing best practices
-  8:  14 tokens | ████████████████                                  | The guide should be beginner-friendly
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+ 3: 45 tokens | | You are an expert software engineer with deep knowledge of Python...
+ 1: 28 tokens | | Write a comprehensive guide for building REST APIs with FastAPI
+ 5: 22 tokens | | Include examples of authentication and database integration
+ 7: 18 tokens | | Make sure to cover testing best practices
+ 8: 14 tokens | | The guide should be beginner-friendly
+
 
  Stats:
 Average tokens per line: 25.4
 Highest token line: 45 tokens
 Lines over 50 tokens: 0
-🛠 Installation
+ Installation
 From PyPI (Recommended)
 bashpip install tokenviz
 From Source
@@ -105,4 +105,4 @@ Debug token issues instantly
 
 No more counting tokens manually or hitting mysterious limits. Just clean, visual token analysis in seconds.
 
-⭐ Star this repo if TokenViz helps you optimize your prompts!
+ Star this repo if TokenViz helps you optimize your prompts!
