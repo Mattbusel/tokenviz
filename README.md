@@ -12,35 +12,61 @@ When a prompt is too long or too expensive, the useful question is "which lines 
 - `--top N` keeps only the N heaviest lines; `--threshold N` keeps only lines above N tokens.
 - Input from an argument, a file (`-f`), or stdin.
 
-## Quick start
+## Install
+
+### Download (no Python needed)
+
+Grab a prebuilt executable from the [latest release](https://github.com/Mattbusel/tokenviz/releases/latest):
+
+| OS | File |
+| --- | --- |
+| Windows | `tokenviz-vX.Y.Z-windows-x86_64.zip` |
+| macOS, Apple Silicon | `tokenviz-vX.Y.Z-macos-arm64.tar.gz` |
+| macOS, Intel | `tokenviz-vX.Y.Z-macos-x86_64.tar.gz` |
+| Linux | `tokenviz-vX.Y.Z-linux-x86_64.tar.gz` |
+
+Unzip it and run `tokenviz` from a terminal (`tokenviz.exe` on Windows). The tokenizer data is built in, so it works offline.
+
+The binaries are unsigned. Windows SmartScreen may say "unknown publisher": click **More info**, then **Run anyway**. On macOS, right-click the binary and choose **Open** the first time, or run `xattr -d com.apple.quarantine tokenviz`.
+
+### pipx
+
+```bash
+pipx install git+https://github.com/Mattbusel/tokenviz
+```
+
+Note: the name `tokenviz` on PyPI belongs to a different, unrelated package, so `pip install tokenviz` will not install this tool.
+
+### From source
 
 ```bash
 git clone https://github.com/Mattbusel/tokenviz
-cd tokenviz/tokenviz
-pip install -r requirements.txt     # tiktoken, click
-
-python -m tokenviz.cli "Write me a detailed story about space exploration"
-python -m tokenviz.cli -f my_prompt.txt --top 5
-python -m tokenviz.cli -f my_prompt.txt --threshold 20 --model gpt-3.5-turbo
-cat my_prompt.txt | python -m tokenviz.cli
+cd tokenviz
+pip install -e ".[dev]"
+pytest
 ```
 
-Note: the name `tokenviz` on PyPI belongs to a different, unrelated package, so `pip install tokenviz` will not install this tool. Install from source.
+## Usage
+
+```bash
+tokenviz "Write me a detailed story about space exploration"
+tokenviz -f my_prompt.txt --top 5
+tokenviz -f my_prompt.txt --threshold 20 --model gpt-3.5-turbo
+cat my_prompt.txt | tokenviz
+```
+
+Without installing, `python -m tokenviz ...` does the same from the repo root.
 
 ## Layout
 
 ```
-tokenviz/                 package root (pyproject.toml, setup.py, requirements.txt)
-  tokenviz/
-    __init__.py
-    cli.py                the click command: count_tokens, analyze_lines, bar rendering
+pyproject.toml            packaging, the `tokenviz` console script
+tokenviz/
+  __init__.py
+  __main__.py             python -m tokenviz
+  cli.py                  the click command: count_tokens, analyze_lines, bar rendering
+tests/                    pytest suite, run by CI on Linux and Windows
 ```
-
-`setup.py` declares a `tokenviz` console script pointing at `tokenviz.cli:main`.
-
-## Status
-
-Early and currently broken as committed. The last lines of `tokenviz/tokenviz/cli.py` (the summary stats block) and of `tokenviz/setup.py` are cut off mid-statement, so both files raise a `SyntaxError` and the commands above fail until those files are completed. The CI workflow installs dependencies and runs pytest if tests exist; there are no tests yet, so a green run does not mean the tool works.
 
 ## Related
 

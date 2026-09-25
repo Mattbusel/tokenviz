@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tokenviz"
+version = "0.2.0"
+description = "Visualize token usage in your prompts for OpenAI models"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Matthew Busel", email = "mattbusel@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Text Processing :: General",
+    "Topic :: Utilities",
+]
+keywords = ["tokens", "openai", "gpt", "visualization", "cli", "prompt-engineering"]
+dependencies = [
+    "tiktoken>=0.4.0",
+    "click>=8.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+tokenviz = "tokenviz.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Mattbusel/tokenviz"
+Issues = "https://github.com/Mattbusel/tokenviz/issues"
+
+[tool.setuptools]
+packages = ["tokenviz"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
