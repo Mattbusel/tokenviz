@@ -1,108 +1,47 @@
- TokenViz - Visualize Token Usage in Your Prompts
+# TokenViz
 
-A fast, clean CLI tool to analyze token usage in text prompts for OpenAI models. Perfect for prompt engineering, staying under token limits, and optimizing your AI interactions.
+A small Python CLI that counts the tokens in a prompt with OpenAI's `tiktoken` and ranks its lines by token cost, with a bar chart per line so the heavy parts stand out.
 
-## Quick Start
+When a prompt is too long or too expensive, the useful question is "which lines are doing it?". TokenViz answers that in one command: total tokens, then every non-empty line sorted by token count, with filters to show only the worst offenders.
+
+## What it does
+
+- Total token count for the whole input, using the tiktoken encoding for the model you name (`gpt-4` by default; unknown names fall back to the GPT-4 encoding with a warning).
+- Per-line token counts, sorted highest first, each with a scaled `█` bar and a preview of the line.
+- Lines over 50 tokens print in yellow, over 100 in red.
+- `--top N` keeps only the N heaviest lines; `--threshold N` keeps only lines above N tokens.
+- Input from an argument, a file (`-f`), or stdin.
+
+## Quick start
 
 ```bash
-# Install
-pip install tokenviz
+git clone https://github.com/Mattbusel/tokenviz
+cd tokenviz/tokenviz
+pip install -r requirements.txt     # tiktoken, click
 
-# Analyze a prompt
-tokenviz "Write me a detailed story about space exploration"
+python -m tokenviz.cli "Write me a detailed story about space exploration"
+python -m tokenviz.cli -f my_prompt.txt --top 5
+python -m tokenviz.cli -f my_prompt.txt --threshold 20 --model gpt-3.5-turbo
+cat my_prompt.txt | python -m tokenviz.cli
+```
 
-# Analyze a file
-tokenviz -f my_prompt.txt
+Note: the name `tokenviz` on PyPI belongs to a different, unrelated package, so `pip install tokenviz` will not install this tool. Install from source.
 
-# Show only the top 5 most token-heavy lines
-tokenviz -f large_prompt.txt --top 5
- Features
+## Layout
 
- Token counting - Accurate token counts using OpenAI's tiktoken
- Line-by-line analysis - See exactly which lines use the most tokens
- Visual bars - Instant visual feedback with colorful token bars
- Smart filtering - Focus on high-token lines with --top and --threshold
- Model support - Works with GPT-4, GPT-3.5-turbo, and other OpenAI models
- Flexible input - Text, files, or stdin
+```
+tokenviz/                 package root (pyproject.toml, setup.py, requirements.txt)
+  tokenviz/
+    __init__.py
+    cli.py                the click command: count_tokens, analyze_lines, bar rendering
+```
 
- Usage
-Basic Usage
-bash# Direct text input
-tokenviz "Your prompt text here"
+`setup.py` declares a `tokenviz` console script pointing at `tokenviz.cli:main`.
 
-# From a file
-tokenviz -f prompt.txt
+## Status
 
-# From stdin
-echo "Your prompt" | tokenviz
-Advanced Options
-bash# Use a specific model for tokenization
-tokenviz -f prompt.txt --model gpt-3.5-turbo
+Early and currently broken as committed. The last lines of `tokenviz/tokenviz/cli.py` (the summary stats block) and of `tokenviz/setup.py` are cut off mid-statement, so both files raise a `SyntaxError` and the commands above fail until those files are completed. The CI workflow installs dependencies and runs pytest if tests exist; there are no tests yet, so a green run does not mean the tool works.
 
-# Show only top 10 lines with most tokens
-tokenviz -f prompt.txt --top 10
+## Related
 
-# Show only lines with more than 20 tokens
-tokenviz -f prompt.txt --threshold 20
-
-# Combine filters
-tokenviz -f prompt.txt --top 5 --threshold 15
- Example Output
- Token Analysis (model: gpt-4)
-Total tokens: 127
-Total lines analyzed: 8
-
-Line breakdown:
-
- 3: 45 tokens | | You are an expert software engineer with deep knowledge of Python...
- 1: 28 tokens | | Write a comprehensive guide for building REST APIs with FastAPI
- 5: 22 tokens | | Include examples of authentication and database integration
- 7: 18 tokens | | Make sure to cover testing best practices
- 8: 14 tokens | | The guide should be beginner-friendly
-
-
- Stats:
-Average tokens per line: 25.4
-Highest token line: 45 tokens
-Lines over 50 tokens: 0
- Installation
-From PyPI (Recommended)
-bashpip install tokenviz
-From Source
-bashgit clone https://github.com/Mattbusel/tokenviz
-
-
-cd tokenviz
-pip install -e .
- Use Cases
-
-Prompt Engineering - Optimize your prompts to stay under token limits
-Cost Optimization - Identify token-heavy sections to reduce API costs
-Debugging - Understand why your prompt is hitting token limits
-Content Analysis - Analyze documents for token distribution
-Batch Processing - Process multiple files to find token patterns
-
- Supported Models
-TokenViz supports all OpenAI models that tiktoken supports:
-
-gpt-4 (default)
-gpt-3.5-turbo
-text-davinci-003
-text-curie-001
-And more...
-
- Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
- License
-MIT License - see LICENSE file for details.
- Why TokenViz?
-Token limits are one of the biggest pain points when working with AI models. TokenViz makes it dead simple to:
-
-See exactly where your tokens are going
-Optimize your prompts visually
-Stay under limits without guesswork
-Debug token issues instantly
-
-No more counting tokens manually or hitting mysterious limits. Just clean, visual token analysis in seconds.
-
- Star this repo if TokenViz helps you optimize your prompts!
+[Token-Visualizer](https://github.com/Mattbusel/Token-Visualizer) is a sibling project by the same author: a single interactive script that also shows the individual token boundaries, supports Hugging Face tokenizers, and suggests shorter phrasings.
