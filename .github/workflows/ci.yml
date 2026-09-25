@@ -29,5 +29,9 @@ jobs:
         shell: bash
         run: |
           tokenviz --version
-          tokenviz "hello world" | grep -q "Total tokens: 2"
-          printf 'a\nb c d\n' | tokenviz --top 1 | grep -q "Total lines analyzed: 1"
+          tokenviz "hello world" | grep "Total tokens: 2" >/dev/null
+          printf 'a\nb c d\n' | tokenviz --top 1 | grep "Total lines analyzed: 1" >/dev/null
+          tokenviz -f examples/system-prompt.txt --json | grep '"total_tokens": 196' >/dev/null
+          tokenviz -f examples/system-prompt.txt --budget 200 | grep "Within budget" >/dev/null
+          set +e; tokenviz -f examples/system-prompt.txt --budget 150; rc=$?; set -e
+          test "$rc" = 3

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-TokenViz: Visualize token usage in text prompts for OpenAI models.
+TokenViz: count the tokens in a prompt and rank its lines by token cost.
 """
 
+import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -99,7 +101,24 @@ def _utf8_stdout() -> None:
                 pass
 
 
-@click.command()
+def _color_choice(no_color: bool) -> Optional[bool]:
+    """False for --no-color or NO_COLOR, True for FORCE_COLOR, else auto (terminal only)."""
+    if no_color or os.environ.get("NO_COLOR"):
+        return False
+    if os.environ.get("FORCE_COLOR"):
+        return True
+    return None
+
+
+def _layout(width: int) -> Tuple[int, int]:
+    """Bar width and line-preview width that fit a terminal `width` columns wide."""
+    fixed = 5 + 11 + 3 + 3 + 7 + 3  # "123: " "1234 tokens" " | " " | " " 12.3%" " | "
+    room = max(40, width - fixed)
+    bar = max(10, min(24, room // 4))
+    return bar, max(20, room - bar)
+
+
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("text", required=False)
 @click.option("--file", "-f", "file_path",
               type=click.Path(exists=True, dir_okay=False),
@@ -113,21 +132,33 @@ def _utf8_stdout() -> None:
 @click.option("--threshold",
               type=click.IntRange(min=0),
               help="Only show lines with more than N tokens")
-@click.version_option(__version__, prog_name="tokenviz")
-def main(text, file_path, model, top, threshold):
+@click.option("--budget", "-b",
+              type=click.IntRange(min=1),
+              help="Exit with code 3 if the whole input is over N tokens (for CI and scripts)")
+@click.option("--json", "as_json", is_flag=True,
+              help="Print machine-readable JSON instead of the chart")
+@click.option("--no-color", is_flag=True, help="Disable colors (NO_COLOR is also respected)")
+@click.version_option(__version__, "-V", "--version", prog_name="tokenviz")
+def main(text, file_path, model, top, threshold, budget, as_json, no_color):
     """
-    TokenViz: Visualize token usage in text prompts.
+    Count the tokens in a prompt and rank its lines by token cost.
 
     \b
     Examples:
         tokenviz "Your prompt text here"
-        tokenviz -f prompt.txt
-        tokenviz -f prompt.txt --top 5
-        tokenviz "Text" --model gpt-3.5-turbo
+        tokenviz -f prompt.txt --top 5          the 5 heaviest lines
+        tokenviz -f prompt.txt --threshold 20   only lines over 20 tokens
+        tokenviz -f prompt.txt -m gpt-4o        GPT-4o's tokenizer (o200k_base)
         cat prompt.txt | tokenviz
+        tokenviz -f prompt.txt --budget 2000    exit 3 if over 2000 tokens
+        tokenviz -f prompt.txt --json           JSON for scripts
     """
     global ENCODER
     _utf8_stdout()
+    color = _color_choice(no_color)
+
+    def say(message="", err=False, **style):
+        click.secho(message, err=err, color=color, **style)
 
     # Set up encoder for specified model
     ENCODER = get_encoder(model)
@@ -137,7 +168,7 @@ def main(text, file_path, model, top, threshold):
         try:
             input_text = Path(file_path).read_text(encoding='utf-8')
         except Exception as e:
-            click.secho(f"Error reading file: {e}", fg="red", err=True)
+            say(f"Error reading file: {e}", err=True, fg="red")
             sys.exit(1)
     elif text:
         input_text = text
@@ -148,21 +179,18 @@ def main(text, file_path, model, top, threshold):
         else:
             if sys.stdin.isatty():
                 eof = "Ctrl+Z then Enter" if os.name == "nt" else "Ctrl+D"
-                click.echo(f"Enter your text ({eof} to finish):", err=True)
+                say(f"Paste or type your prompt, then press {eof} on a new line:", err=True)
             input_text = sys.stdin.read()
 
     if not input_text.strip():
-        click.secho("No input provided", fg="red", err=True)
-        click.echo("Try: tokenviz \"your prompt\"  or  tokenviz -f prompt.txt  (see --help)", err=True)
+        say("No input provided", err=True, fg="red")
+        say("Try: tokenviz \"your prompt\"  or  tokenviz -f prompt.txt  (see --help)", err=True)
         sys.exit(1)
 
     # Analyze the text
     total_tokens = count_tokens(input_text)
-    line_analysis = analyze_lines(input_text)
-
-    if not line_analysis:
-        click.secho("No non-empty lines found", fg="yellow")
-        return
+    all_lines = analyze_lines(input_text)
+    line_analysis = list(all_lines)
 
     # Apply filters
     if threshold is not None:
@@ -175,44 +203,80 @@ def main(text, file_path, model, top, threshold):
     if top:
         line_analysis = line_analysis[:top]
 
-    # Display results
-    click.secho(f"\n📊 Token Analysis (model: {model})", fg="blue", bold=True)
-    click.secho(f"Total tokens: {total_tokens}", fg="green", bold=True)
-    click.secho(f"Total lines analyzed: {len(line_analysis)}\n", fg="green")
+    over_budget = budget is not None and total_tokens > budget
 
-    if not line_analysis:
-        click.secho("No lines match the specified criteria", fg="yellow")
+    if as_json:
+        click.echo(json.dumps({
+            "model": model,
+            "encoding": ENCODER.name,
+            "total_tokens": total_tokens,
+            "lines_total": len(all_lines),
+            "budget": budget,
+            "over_budget": over_budget,
+            "lines": [{"line": n, "tokens": t, "text": s} for n, s, t in line_analysis],
+        }, indent=2, ensure_ascii=False))
+        sys.exit(3 if over_budget else 0)
+
+    width = shutil.get_terminal_size((100, 24)).columns
+    bar_width, preview_width = _layout(width)
+    rule = "─" * min(width, bar_width + preview_width + 32)
+
+    say()
+    say("Token Analysis", bold=True, fg="blue", nl=False)
+    say(f"  model {model}, encoding {ENCODER.name}", dim=True)
+    say("Total tokens: ", nl=False)
+    say(f"{total_tokens}", fg="green", bold=True, nl=False)
+    say(f"   across {len(all_lines)} non-empty lines", dim=True)
+    say(f"Total lines analyzed: {len(line_analysis)}")
+    say()
+
+    if not all_lines:
+        say("No non-empty lines found", fg="yellow")
         return
 
-    # Find max tokens for scaling
-    max_tokens = max(tokens for _, _, tokens in line_analysis)
+    if not line_analysis:
+        say("No lines match the specified criteria", fg="yellow")
+    else:
+        # Find max tokens for scaling
+        max_tokens = max(tokens for _, _, tokens in line_analysis)
 
-    # Display line breakdown
-    click.secho("Line breakdown:", bold=True)
-    click.secho("─" * 120, fg="cyan")
+        say("Line breakdown", bold=True, nl=False)
+        say("  heaviest first; yellow > 50 tokens, red > 100", dim=True)
+        say(rule, fg="cyan", dim=True)
 
-    for line_num, line_text, token_count in line_analysis:
-        formatted_line = format_line_output(line_num, line_text, token_count, max_tokens)
+        for line_num, line_text, token_count in line_analysis:
+            # The heaviest line gets the full bar; the rest are to scale.
+            bar = "█" * max(1, round(token_count / max_tokens * bar_width))
+            share = 100.0 * token_count / total_tokens if total_tokens else 0.0
+            preview = line_text.strip()
+            if len(preview) > preview_width:
+                preview = preview[:preview_width - 3] + "..."
+            fg = "red" if token_count > 100 else "yellow" if token_count > 50 else None
+            say(f"{line_num:>3}: {token_count:>4} tokens ", fg=fg, bold=fg is not None, nl=False)
+            say("| ", dim=True, nl=False)
+            say(f"{bar:<{bar_width}}", fg=fg or "cyan", nl=False)
+            say(f" | {share:5.1f}% | ", dim=True, nl=False)
+            say(preview)
 
-        # Color code based on token count
-        if token_count > 100:
-            click.secho(formatted_line, fg="red")
-        elif token_count > 50:
-            click.secho(formatted_line, fg="yellow")
-        else:
-            click.echo(formatted_line)
+        say(rule, fg="cyan", dim=True)
 
-    click.secho("─" * 120, fg="cyan")
+        # Summary stats
+        if len(line_analysis) > 1:
+            shown = [tokens for _, _, tokens in line_analysis]
+            avg_tokens = sum(shown) / len(shown)
+            say()
+            say("Stats:", fg="blue", bold=True)
+            say(f"  Average tokens per line: {avg_tokens:.1f}")
+            say(f"  Most tokens in a line:   {max(shown)}")
+            say(f"  Fewest tokens in a line: {min(shown)}")
+            say(f"  Tokens in the lines shown: {sum(shown)} of {total_tokens} total")
 
-    # Summary stats
-    if len(line_analysis) > 1:
-        shown = [tokens for _, _, tokens in line_analysis]
-        avg_tokens = sum(shown) / len(shown)
-        click.secho("\n📈 Stats:", fg="blue", bold=True)
-        click.echo(f"  Average tokens per line: {avg_tokens:.1f}")
-        click.echo(f"  Most tokens in a line:   {max(shown)}")
-        click.echo(f"  Fewest tokens in a line: {min(shown)}")
-        click.echo(f"  Tokens in the lines shown: {sum(shown)} of {total_tokens} total")
+    if budget is not None:
+        say()
+        if over_budget:
+            say(f"Over budget: {total_tokens} tokens > {budget} (exit code 3)", fg="red", bold=True)
+            sys.exit(3)
+        say(f"Within budget: {total_tokens} of {budget} tokens", fg="green", bold=True)
 
 
 if __name__ == "__main__":
