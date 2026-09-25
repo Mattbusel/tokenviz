@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+
+PackageIdentifier: Mattbusel.Tokenviz
+PackageVersion: 0.3.0
+PackageLocale: en-US
+Publisher: Mattbusel
+PublisherUrl: https://github.com/Mattbusel
+PublisherSupportUrl: https://github.com/Mattbusel/tokenviz/issues
+PackageName: tokenviz
+PackageUrl: https://github.com/Mattbusel/tokenviz
+License: MIT
+LicenseUrl: https://github.com/Mattbusel/tokenviz/blob/main/LICENSE
+ShortDescription: "Rank the lines of a prompt by token cost, with a budget check for CI"
+Description: "tokenviz counts the tokens in a prompt with OpenAI's tiktoken and ranks its lines by token cost with bars, --top and --threshold filters, a --budget exit code for CI and --json output. Works offline."
+Tags:
+- tokens
+- tiktoken
+- llm
+- prompt
+- cli
+ReleaseNotesUrl: https://github.com/Mattbusel/tokenviz/releases/tag/v0.3.0
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0
