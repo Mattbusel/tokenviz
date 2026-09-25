@@ -58,3 +58,34 @@ def test_stdin_and_unknown_model():
 def test_empty_input_fails():
     result = CliRunner().invoke(main, [], input="   \n")
     assert result.exit_code == 1
+
+
+def test_budget_exit_codes():
+    ok = CliRunner().invoke(main, ["hello world", "--budget", "5"])
+    assert ok.exit_code == 0, ok.output
+    assert "Within budget: 2 of 5 tokens" in ok.output
+    over = CliRunner().invoke(main, ["hello world", "--budget", "1"])
+    assert over.exit_code == 3
+    assert "Over budget: 2 tokens > 1" in over.output
+
+
+def test_json_output():
+    import json
+
+    result = CliRunner().invoke(main, ["one\ntwo three four five", "--json", "--top", "1"])
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["encoding"] == "cl100k_base"
+    assert data["lines_total"] == 2
+    assert [row["line"] for row in data["lines"]] == [2]
+    assert data["over_budget"] is False
+
+
+def test_no_color_and_force_color(monkeypatch):
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    colored = CliRunner().invoke(main, ["hello world"])
+    assert "\x1b[" in colored.output
+    plain = CliRunner().invoke(main, ["hello world", "--no-color"])
+    assert "\x1b[" not in plain.output
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert "\x1b[" not in CliRunner().invoke(main, ["hello world"]).output

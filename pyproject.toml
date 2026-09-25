@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tokenviz"
-version = "0.2.0"
-description = "Visualize token usage in your prompts for OpenAI models"
+version = "0.3.0"
+description = "Rank the lines of a prompt by token cost, with a budget check for CI"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }

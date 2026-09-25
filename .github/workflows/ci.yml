@@ -31,3 +31,7 @@ jobs:
           tokenviz --version
           tokenviz "hello world" | grep -q "Total tokens: 2"
           printf 'a\nb c d\n' | tokenviz --top 1 | grep -q "Total lines analyzed: 1"
+          tokenviz -f examples/system-prompt.txt --json | grep -q '"total_tokens": 196'
+          tokenviz -f examples/system-prompt.txt --budget 200 | grep -q "Within budget"
+          set +e; tokenviz -f examples/system-prompt.txt --budget 150; rc=$?; set -e
+          test "$rc" = 3
